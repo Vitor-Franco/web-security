@@ -4,7 +4,7 @@ import { toValues } from '#shared';
 
 const users = toValues([
   { username: 'bobbytables', password: 'papayawhip' },
-  { username: 'admin', password: 'blanchedalmond' },
+  { username: 'admin', password: 'admin' },
 ]);
 
 await db.run(
