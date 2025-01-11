@@ -3,10 +3,15 @@ import { readFile } from 'fs/promises';
 import cookieParser from 'cookie-parser';
 
 import db from './database.js';
+import { randomUUID } from 'node:crypto';
 
 const app = createServer({ cookies: false });
 const secret = 'SUPER_SECRET'; // this should be in .env
 app.use(cookieParser(secret));
+
+const generateSessionId = () => {
+  return randomUUID();
+};
 
 app.get('/', (req, res) => {
   if (!req.cookies) res.send('Cookies are disabled.');
@@ -44,7 +49,10 @@ app.post('/login', async (req, res) => {
   );
 
   if (user) {
-    res.cookie('username', username, {
+    const sessionId = generateSessionId();
+    await db.run('INSERT INTO sessions (id, username) VALUES (?, ?)', [sessionId, username])
+
+    res.cookie('sessionId', sessionId, {
       httpOnly: true,
       secure: process.env.NODE === 'production',
       signed: true,
@@ -64,15 +72,16 @@ app.post('/logout', (_, res) => {
 app.get('/profile', async (req, res) => {
   res.locals.title = 'Profile';
 
-  const username = req.signedCookies.username;
+  const sessionId = req.signedCookies.sessionId;
 
-  if (!username) {
+  if (!sessionId) {
     return res.redirect('/login?error=Please login to view your profile.');
   }
 
-  const user = await db.get('SELECT * FROM users WHERE username = ?', username);
+  const session = await db.get('SELECT * FROM sessions WHERE id = ?', sessionId);
+  const user = await db.get('SELECT * FROM users WHERE username = ?', session.username);
 
-  if (user && user.username) {
+  if (user?.username) {
     res.send(
       (await readFile('./pages/profile.html', 'utf-8')).replace(
         '{{username}}',
