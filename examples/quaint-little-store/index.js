@@ -1,4 +1,4 @@
-import { startServer, createServer, toParamsAndValues } from '#shared';
+import { startServer, createServer } from '#shared';
 import crypto from 'crypto';
 
 import { db } from './database.js';
@@ -24,8 +24,10 @@ app.use(async (req, res, next) => {
 
   if (session) {
     res.locals.user = await db.get(
-      `SELECT * FROM users INNER JOIN sessions ON users.id = sessions.userId WHERE sessions.sessionId = '${session}'`
+      'SELECT * FROM users INNER JOIN sessions ON users.id = sessions.userId WHERE sessions.sessionId = ?',
+      [session]
     );
+    res.locals.userIsVitao = res.locals.user.name === 'vitor'
   }
 
   next();
@@ -47,15 +49,17 @@ app.post('/login', async (req, res) => {
   const password = req.body.password;
 
   const user = await db.get(
-    `SELECT * FROM users WHERE email = '${email}' AND password = '${password}'`
+    'SELECT * FROM users WHERE email = ? AND password = ?',
+    [email, password]
   );
 
   if (user) {
     const sessionId = crypto.randomBytes(16).toString('hex');
 
-    await db.exec(
-      `INSERT INTO sessions (sessionId, userId) VALUES ('${sessionId}', ${user.id})`
-    );
+    await db.run('INSERT INTO sessions (sessionId, userId) VALUES (?, ?)', [
+      sessionId,
+      user.id,
+    ]);
 
     res.cookie('session', sessionId, {
       secure: process.env.NODE_ENV === 'production',
@@ -69,9 +73,9 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/logout', async (req, res) => {
-  await db.run(
-    `DELETE FROM sessions WHERE sessionId = '${req.cookies.session}'`
-  );
+  await db.run('DELETE FROM sessions WHERE sessionId = ?', [
+    req.cookies.session,
+  ]);
 
   res.clearCookie('session');
   res.redirect('/');
@@ -82,7 +86,8 @@ app.get('/products', async (req, res) => {
   const limit = req.query.limit || 10;
 
   const products = await db.all(
-    `SELECT * FROM products WHERE name LIKE '${search}%' LIMIT ${limit}`
+    'SELECT * FROM products WHERE name LIKE ? LIMIT ?',
+    [`${search}%`, limit]
   );
 
   res.render('products', {
@@ -93,9 +98,9 @@ app.get('/products', async (req, res) => {
 });
 
 app.get('/products/:id', async (req, res) => {
-  const product = await db.get(
-    `SELECT * FROM products WHERE id = ${req.params.id}`
-  );
+  const product = await db.get('SELECT * FROM products WHERE id = ?', [
+    req.params.id,
+  ]);
 
   if (!product) {
     res.status(404).send('Product not found');
@@ -108,11 +113,10 @@ app.get('/products/:id', async (req, res) => {
 app.patch('/products/:id', async (req, res) => {
   if (!res.locals.user?.admin) return res.status(403).send('Forbidden');
 
-  const fields = toParamsAndValues(req.body);
-  const sql = `UPDATE products SET ${fields} WHERE id = ${req.params.id}`;
+  const sql = 'UPDATE products SET ? WHERE id = ?';
 
   try {
-    await db.run(sql);
+    await db.run(sql, [req.body.name, req.params.id]);
     res.sendStatus(204);
   } catch (error) {
     res.send(500).send({ error: /** @type {Error} */ (error).message });
@@ -130,11 +134,10 @@ app.get('/profile', async (req, res) => {
 app.patch('/profile', async (req, res) => {
   if (!res.locals.user) return res.status(403).send({ error: 'Forbidden' });
 
-  const fields = toParamsAndValues(req.body);
-  const sql = `UPDATE users SET ${fields} WHERE id = ${res.locals.user.id}`;
+  const sql = 'UPDATE users SET name = ? WHERE id = ?';
 
   try {
-    await db.run(sql);
+    await db.run(sql, [req.body.name, res.locals.user.id]);
     return res.sendStatus(204);
   } catch (error) {
     console.error(error);

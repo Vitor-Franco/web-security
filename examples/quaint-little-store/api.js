@@ -20,7 +20,8 @@ api.get('/products', async (req, res) => {
 
   try {
     const products = await db.all(
-      `SELECT * FROM products WHERE name LIKE '${search}%' LIMIT ${limit}`
+      'SELECT * FROM products WHERE name LIKE ? LIMIT ?',
+      [`${search}%`, limit]
     );
     res.json({ products });
   } catch (error) {
@@ -29,9 +30,9 @@ api.get('/products', async (req, res) => {
 });
 
 api.get('/products/:id', async (req, res) => {
-  const product = await db.get(
-    `SELECT * FROM products WHERE id = ${req.params.id}`
-  );
+  const product = await db.get('SELECT * FROM products WHERE id = ?', [
+    req.params.id,
+  ]);
 
   if (!product) {
     res.status(404).json({ error: 'Product not found' });
@@ -43,10 +44,10 @@ api.get('/products/:id', async (req, res) => {
 
 api.get('/users', async (req, res) => {
   const search = req.query.search || '';
-  const sql = `SELECT name FROM users WHERE name LIKE '${search}%'`;
+  const sql = 'SELECT name FROM users WHERE name LIKE ?';
 
   try {
-    const users = await db.all(sql);
+    const users = await db.all(sql, [`${search}%`]);
     res.json({ users });
   } catch (error) {
     res.status(500).json({ error: /** @type {Error} */ (error).message });
