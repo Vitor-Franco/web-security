@@ -1,14 +1,16 @@
-import { html, LitElement } from 'lit';
-import { customElement } from 'lit/decorators.js';
+import { html, LitElement } from "lit";
+import { customElement, property } from "lit/decorators.js";
 
-@customElement('create-post')
+@customElement("create-post")
 export class CreatePost extends LitElement {
-  protected createRenderRoot() {
-    return this;
-  }
+	@property({ type: String }) token = "";
 
-  render() {
-    return html`
+	protected createRenderRoot() {
+		return this;
+	}
+
+	render() {
+		return html`
       <form
         action="/posts"
         method="post"
@@ -26,14 +28,15 @@ export class CreatePost extends LitElement {
           />
         </div>
 
+        <input type="hidden" name="_csrf" value="${this.token}" />
         <button type="submit" class="lg:max-w-fit button-small">Post</button>
       </form>
     `;
-  }
+	}
 }
 
 declare global {
-  interface HTMLElementTagNameMap {
-    'create-post': CreatePost;
-  }
+	interface HTMLElementTagNameMap {
+		"create-post": CreatePost;
+	}
 }

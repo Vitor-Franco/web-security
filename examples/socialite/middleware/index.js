@@ -1,4 +1,5 @@
 import { db } from '../database.js';
+import { getSession } from '../index.js';
 
 /**
  * @param {import('express').Request} req
@@ -12,14 +13,23 @@ export const currentUser = async (req, res, next) => {
     return next();
   }
 
+  const session = await getSession(sessionId);
+
+  if (!session) {
+    return next();
+  }
+
   /**
    * @type {import('../database.js').User | undefined}
    */
-  const user = await db.get('SELECT * FROM users WHERE id = ?', [sessionId]);
+  const user = await db.get('SELECT * FROM users WHERE id = ?', [
+    session.userId,
+  ]);
 
   if (user) {
     req.user = user;
     res.locals.user = user;
+    res.locals.token = session.token;
   }
 
   next();
