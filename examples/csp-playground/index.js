@@ -1,10 +1,22 @@
 import { createServer, startServer } from '#shared';
-
+import helmet from 'helmet';
 import { db } from './database.js';
 
 const app = createServer({
   log: true,
 });
+
+app.use(helmet());
+
+app.use(
+  helmet.contentSecurityPolicy({
+    useDefaults: true,
+    directives: {
+      defaultSrc: ["'none'"],
+      scriptSrc: ["'none'"],
+    },
+  })
+);
 
 app.get('/', (req, res) => {
   res.render('index', { title: 'Content Security Policy' });
