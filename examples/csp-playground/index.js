@@ -12,9 +12,29 @@ app.use(
   helmet.contentSecurityPolicy({
     useDefaults: true,
     directives: {
-      defaultSrc: ["'none'"],
-      scriptSrc: ["'none'"],
+      styleSrc: [
+        "'self'",
+        'https://fonts.googleapis.com',
+        'https://cdn.jsdelivr.net',
+      ],
+      imgSrc: [
+        "'self'",
+        'https://static.frontendmasters.com',
+        'https://fav.farm',
+      ],
+      fontSrc: [
+        "'self'",
+        'https://fonts.googleapis.com',
+        'https://fonts.gstatic.com',
+      ],
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      connectSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+      reportTo: 'csp-violation-report',
     },
+    reportOnly: false
   })
 );
 
